@@ -1,0 +1,37 @@
+name: Upload .py files to S3
+
+on:
+  push:
+    branches: [ "master" ]     # change branch if needed
+  workflow_dispatch:         # allow manual run
+
+env:
+  S3_BUCKET: customerscd1landing         # <-- replace with your bucket
+  S3_PREFIX: rdstoredshfit/             # <-- optional path inside S3 (can be "")
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Configure AWS credentials with Access Keys (from GitHub Secrets)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Upload ONLY .py files (recursively) to S3
+      - name: Upload .py files to S3
+        run: |
+          aws s3 cp . "s3://$S3_BUCKET/$S3_PREFIX" \
+            --recursive --exclude "*" --include "*.py"
+
+      # (Optional) sync instead of copy: ensures deleted files in repo are removed in S3
+      # - name: Sync .py files to S3
+      #   run: |
+      #     aws s3 sync . "s3://$S3_BUCKET/$S3_PREFIX" \
+      #       --exclude "*" --include "*.py" --delete
